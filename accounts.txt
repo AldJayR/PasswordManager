@@ -1,0 +1,10 @@
+userID: 0
+category: discord
+username: aldjay
+password: 123
+---
+userID: 0
+category: facebook
+username: foobar
+password: kitkat
+---
