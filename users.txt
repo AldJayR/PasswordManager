@@ -1,4 +1,0 @@
-id: 0
-username: aldwin
-masterPassword: 13895297722304433278
----
