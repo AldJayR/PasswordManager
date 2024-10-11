@@ -42,14 +42,14 @@ int get_int(const string& prompt);
 int generate_unique_id();
 size_t create_password();
 void saveUserToFile(const string& filename, const map<string, User>& usersMap);
-void saveAccountToUser(const string& userID, map<string, vector<Account>>& accountsMap);
+void addAccountToUser(const string& userID, map<string, vector<Account>>& accountsMap);
 void loadUsers(map<string, User>& usersMap);
 void loadAccounts(map<string, vector<Account>>& accountsMap);
 void createUser(map<string, User>& usersMap);
 bool comparePasswords(string passInput, size_t hashedPassword);
 void logInUser(const map<string, User>& usersMap, string& userInSession, LockoutStatus& lockoutStatus);
 void showAccounts(const string& userID, const map<string, vector<Account>>& accountsMap);
-void passwordManagement(const map<string, User> usersMap, const string& username);
+void passwordManagement(const map<string, User> usersMap, const string& username, string& userInSession);
 
 
 int main()
@@ -117,10 +117,10 @@ LockoutStatus loadLockoutStatus()
                     catch (const std::out_of_range& e)
                     {
                         cout << "Error: Lockout time is out of range.\n";
-                        status.isLocked = false; // Reset lock status on error
+                        status.isLocked = false;
                     }
                 }
-                break; // Exit after finding the locked status
+                break;
             }
         }
         inFile.close();
@@ -182,10 +182,9 @@ int get_int(const string& prompt)
 
 int generate_unique_id()
 {
-    // placeholder
-    static int id = 0;
+    srand(time(0));
 
-    return id++;
+    return rand() % 900 + 100;
 }
 
 size_t create_password()
@@ -234,7 +233,7 @@ void saveUserToFile(const string& filename, const map<string, User>& usersMap)
     outFile.close();
 }
 
-void saveAccountToUser(const string& userID, map<string, vector<Account>>& accountsMap)
+void addAccountToUser(const string& userID, map<string, vector<Account>>& accountsMap)
 {
     Account newAccount;
 
@@ -388,6 +387,9 @@ void createUser(map<string, User>& usersMap)
     saveUserToFile(USERS, usersMap);
 
     cout << "User created successfully!" << '\n';
+    cin.ignore();
+    Sleep(3000);
+    system("CLS");
 }
 
 
@@ -446,7 +448,7 @@ void logInUser(const map<string, User>& usersMap, string& userInSession, Lockout
             Sleep(4000);
             userInSession = currentUser.userID;
             system("CLS");
-            passwordManagement(usersMap, currentUser.username);
+            passwordManagement(usersMap, currentUser.username, userInSession);
             return;
         }
         else
@@ -472,14 +474,14 @@ void showAccounts(const string& userID, const map<string, vector<Account>>& acco
     if (it != accountsMap.end())
     {
         cout << "Accounts" << '\n';
-        cout << "--------------------------\n";
+        cout << "--------------------------\n\n";
         for (const auto& account : it->second)
         {
             cout << "Category: " << account.category
                  << ", Username: " << account.username
                  << ", Password: " << account.password << '\n';
         }
-        cout << "Press any key to continue...";
+        cout << "\nPress any key to continue...";
         cin.get();
         system("CLS");
 
@@ -487,11 +489,165 @@ void showAccounts(const string& userID, const map<string, vector<Account>>& acco
     else
     {
         cout << "No accounts found for this user.\n";
+        Sleep(3000);
+        system("CLS");
+    }
+}
+
+void updateAccount(const string& userID, map<string, vector<Account>>& accountsMap)
+{
+    system("CLS");
+    auto it = accountsMap.find(userID);
+    if (it != accountsMap.end())
+    {
+        vector<Account>& userAccounts = it->second;
+        if (userAccounts.empty())
+        {
+            cout << "No accounts available to update.\n";
+            return;
+        }
+
+        cout << "Accounts:" << '\n';
+        cout << "--------------------\n";
+        for (size_t i = 0; i < userAccounts.size(); ++i)
+        {
+            cout << i + 1 << ". Category: " << userAccounts[i].category
+                 << ", Username: " << userAccounts[i].username
+                 << ", Password: " << userAccounts[i].password << '\n';
+        }
+
+        int choice = get_int("\nSelect the account number you want to update: ") - 1;
+        if (choice < 0 || choice >= userAccounts.size())
+        {
+            cout << "Invalid selection. Returning to menu.\n";
+            return;
+        }
+
+        cout << "Enter new account category (leave blank to keep): ";
+        string newCategory;
+        getline(cin, newCategory);
+        if (!newCategory.empty())
+        {
+            userAccounts[choice].category = newCategory;
+        }
+
+        cout << "Enter new account username (leave blank to keep): ";
+        string newUsername;
+        getline(cin, newUsername);
+        if (!newUsername.empty())
+        {
+            userAccounts[choice].username = newUsername;
+        }
+
+        cout << "Enter new account password (leave blank to keep): ";
+        string newPassword;
+        getline(cin, newPassword);
+        if (!newPassword.empty())
+        {
+            userAccounts[choice].password = newPassword;
+        }
+
+        ofstream outFile(ACCOUNTS_LIST);
+
+        if (!outFile)
+        {
+            cout << "Error opening accounts file for writing.\n";
+            return;
+        }
+
+        for (const auto& [userId, accounts] : accountsMap)
+        {
+            for (const auto& account : accounts)
+            {
+                outFile << "userID: " << userId << '\n'
+                        << "category: " << account.category << '\n'
+                        << "username: " << account.username << '\n'
+                        << "password: " << account.password << '\n'
+                        << "---\n";
+            }
+        }
+        outFile.close();
+
+        cout << "Account updated successfully!" << '\n';
+        Sleep(2000);
+        system("CLS");
+    }
+    else
+    {
+        cout << "No accounts found for this user.\n";
+        Sleep(3000);
+        system("CLS");
+    }
+}
+
+void deleteAccount(const string& userID, map<string, vector<Account>>& accountsMap)
+{
+    system("CLS");
+    auto it = accountsMap.find(userID);
+    if (it != accountsMap.end())
+    {
+        vector<Account>& userAccounts = it->second;
+        if (userAccounts.empty())
+        {
+            cout << "No accounts available to delete.\n";
+            return;
+        }
+
+        cout << "Accounts:" << '\n';
+        cout << "--------------------\n";
+        for (size_t i = 0; i < userAccounts.size(); ++i)
+        {
+            cout << i + 1 << ". Category: " << userAccounts[i].category
+                 << ", Username: " << userAccounts[i].username
+                 << ", Password: " << userAccounts[i].password << '\n';
+        }
+
+        int choice = get_int("\nSelect the account number you want to delete: ") - 1;
+
+        cout << "Are you sure you want to delete this account? (Y/N) ";
+        char prompt;
+        cin >> prompt;
+
+        if (toupper(prompt) == 'N')
+        {
+            return;
+        }
+
+        if (choice < 0 || choice >= userAccounts.size())
+        {
+            cout << "Invalid selection. Returning to menu.\n";
+            return;
+        }
+
+        userAccounts.erase(userAccounts.begin() + choice);
+
+        ofstream outFile(ACCOUNTS_LIST);
+        for (const auto& [userId, accounts] : accountsMap)
+        {
+            for (const auto& account : accounts)
+            {
+                outFile << "userID: " << account.userID << '\n'
+                        << "category: " << account.category << '\n'
+                        << "username: " << account.username << '\n'
+                        << "password: " << account.password << '\n'
+                        << "---\n";
+            }
+        }
+        outFile.close();
+        cout << "\nAccount deleted successfully!" << '\n';
+        Sleep(2000);
+        system("CLS");
+    }
+    else
+    {
+        cout << "No accounts found for this user. Return to main menu to add an account.\n";
+        Sleep(2000);
+        system("CLS");
     }
 }
 
 
-void passwordManagement(const map<string, User> usersMap, const string& username)
+void passwordManagement(const map<string, User> usersMap, const string& username, string& userInSession)
 {
     map<string, vector<Account>> accountsMap;
     loadAccounts(accountsMap);
@@ -518,25 +674,28 @@ void passwordManagement(const map<string, User> usersMap, const string& username
         switch (choice)
         {
             case 1:
-                // TODO: add account function
-                saveAccountToUser(it->second.userID, accountsMap);
+                addAccountToUser(it->second.userID, accountsMap);
                 break;
             case 2:
                 showAccounts(it->second.userID, accountsMap);
                 break;
             case 3:
                 // TODO: update account function
+                updateAccount(it->second.userID, accountsMap);
                 break;
             case 4:
                 // TODO: delete account function
+                deleteAccount(it->second.userID, accountsMap);
                 break;
             case 5:
+                userInSession = "";
+                cout << "Logging out...";
+                Sleep(3000);
+                system("CLS");
                 return;
             default:
                 cout << "Invalid option. Please try again" << '\n';
                 break;
-
-
         }
     }
     while (choice != 5);
