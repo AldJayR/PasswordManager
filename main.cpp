@@ -376,8 +376,13 @@ void createUser(map<string, User>& usersMap)
 {
     User newUser;
 
-    cout << "Enter username: ";
+    cout << "Enter username (press 0 to exit): ";
     getline(cin >> ws, newUser.username);
+    if (newUser.username == "0")
+    {
+        system("CLS");
+        return;
+    }
 
     newUser.masterPassword = create_password();
     newUser.userID = to_string(generate_unique_id());
@@ -610,8 +615,14 @@ void deleteAccount(const string& userID, map<string, vector<Account>>& accountsM
 
         if (toupper(prompt) == 'N')
         {
+            cout << "Returning to menu.";
+            Sleep(3000);
+            system("CLS");
             return;
         }
+
+        cin.ignore();
+
 
         if (choice < 0 || choice >= userAccounts.size())
         {
@@ -626,7 +637,7 @@ void deleteAccount(const string& userID, map<string, vector<Account>>& accountsM
         {
             for (const auto& account : accounts)
             {
-                outFile << "userID: " << account.userID << '\n'
+                outFile << "userID: " << userId << '\n'
                         << "category: " << account.category << '\n'
                         << "username: " << account.username << '\n'
                         << "password: " << account.password << '\n'
