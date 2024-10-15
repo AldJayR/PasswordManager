@@ -43,6 +43,7 @@ struct LockoutStatus
 LockoutStatus loadLockoutStatus();
 void saveLockoutStatus(const LockoutStatus& status);
 int get_int(const string& prompt);
+void displayStartScreen();
 int generate_unique_id();
 size_t create_password();
 void saveUserToFile(const string& filename, const map<string, User>& usersMap);
@@ -65,6 +66,8 @@ int main()
     string userInSession = "";
 
     loadUsers(usersMap);
+
+    displayStartScreen();
 
     while (userInSession == "")
     {
@@ -193,6 +196,29 @@ int get_int(const string& prompt)
             cout << BRED << "Invalid input. Please enter a valid integer.\n" << RESET;
         }
     }
+}
+
+void displayStartScreen()
+{
+    system("CLS"); // Clear the console screen
+    cout << CYAN; // Set color to Cyan for the banner
+
+    cout << R"(
+ ▄████▄▓██   ██▓ ▄▄▄▄   ▓█████  ██▀███  ▄▄▄█████▓ ██▀███  ▓█████ ▒██   ██▒
+▒██▀ ▀█ ▒██  ██▒▓█████▄ ▓█   ▀ ▓██ ▒ ██▒▓  ██▒ ▓▒▓██ ▒ ██▒▓█   ▀ ▒▒ █ █ ▒░
+▒▓█    ▄ ▒██ ██░▒██▒ ▄██▒███   ▓██ ░▄█ ▒▒ ▓██░ ▒░▓██ ░▄█ ▒▒███   ░░  █   ░
+▒▓▓▄ ▄██▒░ ▐██▓░▒██░█▀  ▒▓█  ▄ ▒██▀▀█▄  ░ ▓██▓ ░ ▒██▀▀█▄  ▒▓█  ▄  ░ █ █ ▒
+▒ ▓███▀ ░░ ██▒▓░░▓█  ▀█▓░▒████▒░██▓ ▒██▒  ▒██▒ ░ ░██▓ ▒██▒░▒████▒▒██▒ ▒██▒
+░ ░▒ ▒  ░ ██▒▒▒ ░▒▓███▀▒░░ ▒░ ░░ ▒▓ ░▒▓░  ▒ ░░   ░ ▒▓ ░▒▓░░░ ▒░ ░▒▒ ░ ░▓ ░
+  ░  ▒  ▓██ ░▒░ ▒░▒   ░  ░ ░  ░  ░▒ ░ ▒░    ░      ░▒ ░ ▒░ ░ ░  ░░░   ░▒ ░
+░       ▒ ▒ ░░   ░    ░    ░     ░░   ░   ░        ░░   ░    ░    ░    ░
+░ ░     ░ ░      ░         ░  ░   ░                 ░        ░  ░ ░    ░
+░       ░ ░           ░
+    )" << RESET << '\n';
+    cout << CYAN << "Loading...";
+
+    Sleep(5000);
+    return;
 }
 
 int generate_unique_id()
