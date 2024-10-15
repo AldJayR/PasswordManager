@@ -8,6 +8,10 @@
 #include <cstdlib>
 #include <ctime>
 #include <windows.h>
+#include <limits>
+#include <iomanip>
+#include <conio.h>
+#include "colors.h"
 
 using namespace std;
 
@@ -54,6 +58,8 @@ void passwordManagement(const map<string, User> usersMap, const string& username
 
 int main()
 {
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleTitle("CyberTrex Password Manager");
     map<string, User> usersMap;
     LockoutStatus lockoutStatus = loadLockoutStatus();
     string userInSession = "";
@@ -62,12 +68,19 @@ int main()
 
     while (userInSession == "")
     {
-        cout << "CyberTrex Password Manager" << '\n';
-        cout << "--------------------------" << '\n';
-        cout << "1. Create User\n";
-        cout << "2. Log In\n";
-        cout << "3. Exit\n";
-        int choice = get_int("\n>> ");
+        system("cls");
+
+        cout << BOLD << CYAN << "╔══════════════════════════════════════════╗" << RESET << '\n';
+        cout << BOLD << CYAN << "║       CyberTrex Password Manager         ║" << RESET << '\n';
+        cout << BOLD << CYAN << "╚══════════════════════════════════════════╝" << RESET << '\n';
+
+        cout << BLUE << "┌──────────────────────────────────────────┐" << RESET << '\n';
+        cout << BLUE << "│ " << WHITE << "1. Create User                           " << BLUE << "│" << RESET << '\n';
+        cout << BLUE << "│ " << WHITE << "2. Log In                                " << BLUE << "│" << RESET << '\n';
+        cout << BLUE << "│ " << WHITE << "3. Exit                                  " << BLUE << "│" << RESET << '\n';
+        cout << BLUE << "└──────────────────────────────────────────┘" << RESET << '\n';
+
+        int choice = get_int(YELLOW "\n>> " RESET);
 
         switch (choice)
         {
@@ -78,9 +91,11 @@ int main()
                 logInUser(usersMap, userInSession, lockoutStatus);
                 break;
             case 3:
+                cout << GREEN << "\nThank you for using CyberTrex Password Manager. Goodbye!" << RESET << '\n';
+                Sleep(2000);
                 return 0;
             default:
-                cout << "Invalid option. Please try again.\n";
+                cout << RED << "\nInvalid option. Please try again." << RESET << '\n';
         }
     }
 }
@@ -111,12 +126,12 @@ LockoutStatus loadLockoutStatus()
                     }
                     catch (const std::invalid_argument& e)
                     {
-                        cout << "Error: Invalid lockout time format in lockout status file.\n";
+                        cout << BRED << "Error: Invalid lockout time format in lockout status file.\n";
                         status.isLocked = false;
                     }
                     catch (const std::out_of_range& e)
                     {
-                        cout << "Error: Lockout time is out of range.\n";
+                        cout << BRED << "Error: Lockout time is out of range.\n";
                         status.isLocked = false;
                     }
                 }
@@ -175,7 +190,7 @@ int get_int(const string& prompt)
         }
         else
         {
-            cout << "Invalid input. Please enter a valid integer.\n";
+            cout << BRED << "Invalid input. Please enter a valid integer.\n";
         }
     }
 }
@@ -194,7 +209,7 @@ size_t create_password()
 
     while (true)
     {
-        cout << "Enter password: ";
+        cout << BLUE << "Enter password: ";
         cin >> password;
 
         if (regex_match(password, password_regex))
@@ -206,7 +221,7 @@ size_t create_password()
         }
         else
         {
-            cout << "Passwords must be at least 8 characters minimum." << '\n';
+            cout << BRED << "Passwords must be at least 8 characters minimum." << '\n';
         }
     }
 }
@@ -237,8 +252,15 @@ void addAccountToUser(const string& userID, map<string, vector<Account>>& accoun
 {
     Account newAccount;
 
-    cout << "Enter account category: ";
+    cout << "Enter account category (press 0 to exit): ";
     getline(cin >> ws, newAccount.category);
+
+    if (newAccount.category == "0")
+    {
+        cout << "Returning to main menu...";
+        Sleep(2000);
+        return;
+    }
 
     cout << "Enter account username: ";
     getline(cin >> ws, newAccount.username);
@@ -258,13 +280,9 @@ void addAccountToUser(const string& userID, map<string, vector<Account>>& accoun
                 << "username: " << newAccount.username << '\n'
                 << "password: " << newAccount.password << '\n'
                 << "---\n";
-        cout << "Account saved!" << '\n';
+        cout << GREEN << "Account saved!" << '\n';
         Sleep(2000);
         system("CLS");
-    }
-    else
-    {
-        cout << "Error opening accounts file for writing.\n";
     }
 }
 
@@ -310,10 +328,6 @@ void loadUsers(map<string, User>& usersMap)
         }
 
         inFile.close();
-    }
-    else
-    {
-        cout << "Error opening user file for reading.\n";
     }
 }
 
@@ -366,17 +380,13 @@ void loadAccounts(map<string, vector<Account>>& accountsMap)
         }
         inFile.close();
     }
-    else
-    {
-        cout << "Error opening accounts file for reading.\n";
-    }
 }
 
 void createUser(map<string, User>& usersMap)
 {
     User newUser;
 
-    cout << "Enter username (press 0 to exit): ";
+    cout << BLUE << "Enter username (press 0 to exit): ";
     getline(cin >> ws, newUser.username);
     if (newUser.username == "0")
     {
@@ -391,7 +401,7 @@ void createUser(map<string, User>& usersMap)
 
     saveUserToFile(USERS, usersMap);
 
-    cout << "User created successfully!" << '\n';
+    cout << GREEN << "User created successfully! Returning to main menu..." << '\n';
     cin.ignore();
     Sleep(3000);
     system("CLS");
@@ -415,7 +425,7 @@ void logInUser(const map<string, User>& usersMap, string& userInSession, Lockout
         time_t currentTime = time(0);
         if (difftime(currentTime, lockoutStatus.lockoutTime) < 900)
         {
-            cout << "You have reached the maximum number of attempts. Please try again later.\n";
+            cout << BRED << "You have reached the maximum number of attempts. Please try again later.\n";
             Sleep(3000);
             system("CLS");
             return;
@@ -429,15 +439,22 @@ void logInUser(const map<string, User>& usersMap, string& userInSession, Lockout
 
     while (passwordAttempts < 8)
     {
-        cout << "Username: ";
+        cout << CYAN << "Username (enter 0 to exit): ";
         string username;
         getline(cin >> ws, username);
+
+        if (username == "0")
+        {
+            cout << "Returning to main menu...";
+            Sleep(2000);
+            return;
+        }
 
         auto it = find_if(usersMap.begin(), usersMap.end(),
             [&](const auto& pair) { return pair.second.username == username; });
         if (it == usersMap.end())
         {
-            cout << "Incorrect username. Please try again.\n";
+            cout << BRED << "Incorrect username. Please try again.\n";
             continue;
         }
 
@@ -445,12 +462,34 @@ void logInUser(const map<string, User>& usersMap, string& userInSession, Lockout
 
         cout << "Master Password: ";
         string password;
-        getline(cin >> ws, password);
+        char ch;
+
+        while (true)
+        {
+            ch = getch(); // Read character without echoing
+            if (ch == '\r') // Enter key
+                break;
+            else if (ch == '\b') // Backspace key
+            {
+                if (!password.empty())
+                {
+                    password.pop_back(); // Remove last character
+                    cout << "\b \b"; // Move back, print space, and move back again
+                }
+            }
+            else
+            {
+                password += ch; // Add character to password
+                cout << '*'; // Print asterisk
+            }
+        }
+
+        cout << endl;
 
         if (comparePasswords(password, currentUser.masterPassword))
         {
-            cout << "Welcome! Logging you in...";
-            Sleep(4000);
+            cout << GREEN << "Welcome! Logging you in..." << RESET;
+            Sleep(2000);
             userInSession = currentUser.userID;
             system("CLS");
             passwordManagement(usersMap, currentUser.username, userInSession);
@@ -458,14 +497,14 @@ void logInUser(const map<string, User>& usersMap, string& userInSession, Lockout
         }
         else
         {
-            cout << "Incorrect password. Please try again.\n";
+            cout << BRED << "Incorrect password. Please try again.\n";
             passwordAttempts++;
         }
     }
 
     if (passwordAttempts >= 8)
     {
-        cout << "The client has been locked out temporarily. Please try again later.\n";
+        cout << BRED << "The client has been locked out temporarily. Please try again later.\n";
         lockoutStatus.isLocked = true;
         lockoutStatus.lockoutTime = time(0);
         saveLockoutStatus(lockoutStatus);
@@ -474,28 +513,39 @@ void logInUser(const map<string, User>& usersMap, string& userInSession, Lockout
 
 void showAccounts(const string& userID, const map<string, vector<Account>>& accountsMap)
 {
-    system("CLS");
+    system("cls");
     auto it = accountsMap.find(userID);
-    if (it != accountsMap.end())
+    if (it != accountsMap.end() && !it->second.empty())
     {
-        cout << "Accounts" << '\n';
-        cout << "--------------------------\n\n";
+        cout << BOLD << CYAN << "╔══════════════════════════════════════════╗" << RESET << '\n';
+        cout << BOLD << CYAN << "║              Your Accounts               ║" << RESET << '\n';
+        cout << BOLD << CYAN << "╚══════════════════════════════════════════╝" << RESET << '\n';
+
+        cout << BLUE << "┌──────────────────┬──────────────────┬──────────────────┐" << RESET << '\n';
+        cout << BLUE << "│ " << WHITE << setw(16) << left << "Category"
+             << BLUE << " │ " << WHITE << setw(16) << left << "Username"
+             << BLUE << " │ " << WHITE << setw(16) << left << "Password"
+             << BLUE << " │" << RESET << '\n';
+        cout << BLUE << "├──────────────────┼──────────────────┼──────────────────┤" << RESET << '\n';
+
         for (const auto& account : it->second)
         {
-            cout << "Category: " << account.category
-                 << ", Username: " << account.username
-                 << ", Password: " << account.password << '\n';
+            cout << BLUE << "│ " << WHITE << setw(16) << left << account.category
+                 << BLUE << " │ " << WHITE << setw(16) << left << account.username
+                 << BLUE << " │ " << WHITE << setw(16) << left << account.password
+                 << BLUE << " │" << RESET << '\n';
         }
-        cout << "\nPress any key to continue...";
-        cin.get();
-        system("CLS");
 
+        cout << BLUE << "└──────────────────┴──────────────────┴──────────────────┘" << RESET << '\n';
+
+        cout << YELLOW << "\nPress any key to continue..." << RESET;
+        cin.ignore();
+        cin.get();
     }
     else
     {
-        cout << "No accounts found for this user.\n";
-        Sleep(3000);
-        system("CLS");
+        cout << RED << "No accounts found for this user." << RESET << '\n';
+        Sleep(2000);
     }
 }
 
@@ -508,49 +558,56 @@ void updateAccount(const string& userID, map<string, vector<Account>>& accountsM
         vector<Account>& userAccounts = it->second;
         if (userAccounts.empty())
         {
-            cout << "No accounts available to update.\n";
+            cout << RED << "No accounts available to update." << RESET << '\n';
+            Sleep(2000);
             return;
         }
 
-        cout << "Accounts:" << '\n';
-        cout << "--------------------\n";
+        cout << BOLD << CYAN << "╔══════════════════════════════════════════╗" << RESET << '\n';
+        cout << BOLD << CYAN << "║            Update an Account             ║" << RESET << '\n';
+        cout << BOLD << CYAN << "╚══════════════════════════════════════════╝" << RESET << '\n';
+
+        cout << "\nYour Accounts:\n";
+        cout << BLUE << "┌──────┬─────────────┬─────────────┬─────────────┐" << RESET << '\n';
+        cout << BLUE << "│ " << WHITE << " No. │  Category   │  Username   │  Password   " << BLUE << "│" << RESET << '\n';
+        cout << BLUE << "├──────┼─────────────┼─────────────┼─────────────┤" << RESET << '\n';
+
         for (size_t i = 0; i < userAccounts.size(); ++i)
         {
-            cout << i + 1 << ". Category: " << userAccounts[i].category
-                 << ", Username: " << userAccounts[i].username
-                 << ", Password: " << userAccounts[i].password << '\n';
+            cout << BLUE << "│ " << WHITE << setw(4) << i + 1 << " │ "
+                 << setw(11) << left << userAccounts[i].category << " │ "
+                 << setw(11) << userAccounts[i].username << " │ "
+                 << setw(11) << userAccounts[i].password << BLUE << " │" << RESET << '\n';
         }
+        cout << BLUE << "└──────┴─────────────┴─────────────┴─────────────┘" << RESET << '\n';
 
         int choice = get_int("\nSelect the account number you want to update: ") - 1;
         if (choice < 0 || choice >= userAccounts.size())
         {
-            cout << "Invalid selection. Returning to menu.\n";
+            cout << RED << "Invalid selection. Returning to menu." << RESET << '\n';
+            Sleep(2000);
             return;
         }
 
-        cout << "Enter new account category (leave blank to keep): ";
-        string newCategory;
+        cout << YELLOW << "\nUpdating account: " << WHITE << userAccounts[choice].category << RESET << '\n';
+        cout << YELLOW << "Leave fields blank to keep current values.\n" << RESET;
+
+        string newCategory, newUsername, newPassword;
+
+        cout << CYAN << "Current category: " << WHITE << userAccounts[choice].category << RESET << '\n';
+        cout << "Enter new category: ";
         getline(cin, newCategory);
-        if (!newCategory.empty())
-        {
-            userAccounts[choice].category = newCategory;
-        }
+        if (!newCategory.empty()) userAccounts[choice].category = newCategory;
 
-        cout << "Enter new account username (leave blank to keep): ";
-        string newUsername;
+        cout << CYAN << "Current username: " << WHITE << userAccounts[choice].username << RESET << '\n';
+        cout << "Enter new username: ";
         getline(cin, newUsername);
-        if (!newUsername.empty())
-        {
-            userAccounts[choice].username = newUsername;
-        }
+        if (!newUsername.empty()) userAccounts[choice].username = newUsername;
 
-        cout << "Enter new account password (leave blank to keep): ";
-        string newPassword;
+        cout << CYAN << "Current password: " << WHITE << userAccounts[choice].password << RESET << '\n';
+        cout << "Enter new password: ";
         getline(cin, newPassword);
-        if (!newPassword.empty())
-        {
-            userAccounts[choice].password = newPassword;
-        }
+        if (!newPassword.empty()) userAccounts[choice].password = newPassword;
 
         ofstream outFile(ACCOUNTS_LIST);
 
@@ -573,7 +630,7 @@ void updateAccount(const string& userID, map<string, vector<Account>>& accountsM
         }
         outFile.close();
 
-        cout << "Account updated successfully!" << '\n';
+        cout << BGREEN << "Account updated successfully!" << RESET << '\n';
         Sleep(2000);
         system("CLS");
     }
@@ -587,46 +644,54 @@ void updateAccount(const string& userID, map<string, vector<Account>>& accountsM
 
 void deleteAccount(const string& userID, map<string, vector<Account>>& accountsMap)
 {
-    system("CLS");
+    system("cls");
     auto it = accountsMap.find(userID);
     if (it != accountsMap.end())
     {
         vector<Account>& userAccounts = it->second;
         if (userAccounts.empty())
         {
-            cout << "No accounts available to delete.\n";
+            cout << RED << "No accounts available to delete." << RESET << '\n';
+            Sleep(2000);
             return;
         }
 
-        cout << "Accounts:" << '\n';
-        cout << "--------------------\n";
+        cout << BOLD << CYAN << "╔══════════════════════════════════════════╗" << RESET << '\n';
+        cout << BOLD << CYAN << "║            Delete an Account             ║" << RESET << '\n';
+        cout << BOLD << CYAN << "╚══════════════════════════════════════════╝" << RESET << '\n';
+
+        cout << "\nYour Accounts:\n";
+        cout << BLUE << "┌──────┬─────────────┬─────────────┬─────────────┐" << RESET << '\n';
+        cout << BLUE << "│ " << WHITE << " No. │  Category   │  Username   │  Password   " << BLUE << "│" << RESET << '\n';
+        cout << BLUE << "├──────┼─────────────┼─────────────┼─────────────┤" << RESET << '\n';
+
         for (size_t i = 0; i < userAccounts.size(); ++i)
         {
-            cout << i + 1 << ". Category: " << userAccounts[i].category
-                 << ", Username: " << userAccounts[i].username
-                 << ", Password: " << userAccounts[i].password << '\n';
+            cout << BLUE << "│ " << WHITE << setw(4) << i + 1 << " │ "
+                 << setw(11) << left << userAccounts[i].category << " │ "
+                 << setw(11) << userAccounts[i].username << " │ "
+                 << setw(11) << userAccounts[i].password << BLUE << " │" << RESET << '\n';
         }
+        cout << BLUE << "└──────┴─────────────┴─────────────┴─────────────┘" << RESET << '\n';
 
         int choice = get_int("\nSelect the account number you want to delete: ") - 1;
 
-        cout << "Are you sure you want to delete this account? (Y/N) ";
-        char prompt;
-        cin >> prompt;
-
-        if (toupper(prompt) == 'N')
+        if (choice < 0 || choice >= userAccounts.size())
         {
-            cout << "Returning to menu.";
-            Sleep(3000);
-            system("CLS");
+            cout << RED << "Invalid selection. Returning to menu." << RESET << '\n';
+            Sleep(2000);
             return;
         }
 
+        cout << YELLOW << "Are you sure you want to delete this account? (Y/N): " << RESET;
+        char prompt;
+        cin >> prompt;
         cin.ignore();
 
-
-        if (choice < 0 || choice >= userAccounts.size())
+        if (toupper(prompt) != 'Y')
         {
-            cout << "Invalid selection. Returning to menu.\n";
+            cout << GREEN << "Deletion cancelled. Returning to menu." << RESET << '\n';
+            Sleep(2000);
             return;
         }
 
@@ -645,15 +710,13 @@ void deleteAccount(const string& userID, map<string, vector<Account>>& accountsM
             }
         }
         outFile.close();
-        cout << "\nAccount deleted successfully!" << '\n';
+        cout << GREEN << "\nAccount deleted successfully!" << RESET << '\n';
         Sleep(2000);
-        system("CLS");
     }
     else
     {
-        cout << "No accounts found for this user. Return to main menu to add an account.\n";
+        cout << RED << "No accounts found for this user. Return to main menu to add an account." << RESET << '\n';
         Sleep(2000);
-        system("CLS");
     }
 }
 
@@ -670,18 +733,29 @@ void passwordManagement(const map<string, User> usersMap, const string& username
 
     do
     {
-        cout << "CyberTrex Password Manager" << '\n';
-        cout << "--------------------------" << '\n';
-        cout << "Welcome, " << username << "!" << '\n';
-        cout << "\nOptions:" << '\n';
-        cout << "1. Add an Account" << '\n';
-        cout << "2. Display accounts" << '\n';
-        cout << "3. Update an account" << '\n';
-        cout << "4. Delete an account" << '\n';
-        cout << "5. Log out" << '\n';
+        // Clear the screen
+        system("CLS");
 
+        cout << BOLD << CYAN << "╔══════════════════════════════════════════╗" << RESET << '\n';
+        cout << BOLD << CYAN << "║       CyberTrex Password Manager         ║" << RESET << '\n';
+        cout << BOLD << CYAN << "╚══════════════════════════════════════════╝" << RESET << '\n';
+
+        // Welcome message
+        cout << "\n" << YELLOW << "Welcome, " << BOLD << username << RESET << "!\n\n";
+
+        // Menu options
+        cout << BLUE << "┌──────────────────────────────────────────┐" << RESET << '\n';
+        cout << BLUE << "│ " << WHITE << "1. Add an Account                        " << BLUE << "│" << RESET << '\n';
+        cout << BLUE << "│ " << WHITE << "2. Display Accounts                      " << BLUE << "│" << RESET << '\n';
+        cout << BLUE << "│ " << WHITE << "3. Update an Account                     " << BLUE << "│" << RESET << '\n';
+        cout << BLUE << "│ " << WHITE << "4. Delete an Account                     " << BLUE << "│" << RESET << '\n';
+        cout << BLUE << "│ " << WHITE << "5. Log out                               " << BLUE << "│" << RESET << '\n';
+        cout << BLUE << "└──────────────────────────────────────────┘" << RESET << '\n';
+
+        // Prompt user for choice
         choice = get_int("\n>> ");
 
+        // Execute the corresponding function based on user choice
         switch (choice)
         {
             case 1:
@@ -691,23 +765,23 @@ void passwordManagement(const map<string, User> usersMap, const string& username
                 showAccounts(it->second.userID, accountsMap);
                 break;
             case 3:
-                // TODO: update account function
                 updateAccount(it->second.userID, accountsMap);
                 break;
             case 4:
-                // TODO: delete account function
                 deleteAccount(it->second.userID, accountsMap);
                 break;
             case 5:
                 userInSession = "";
-                cout << "Logging out...";
-                Sleep(3000);
-                system("CLS");
+                cout << GREEN << "\nLogging out..." << RESET;
+                Sleep(1500);
+                system("cls");
                 return;
             default:
-                cout << "Invalid option. Please try again" << '\n';
+                cout << RED << "\nInvalid option. Please try again." << RESET << '\n';
+                Sleep(1500);
                 break;
         }
     }
     while (choice != 5);
+
 }
