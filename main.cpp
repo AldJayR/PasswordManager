@@ -1,16 +1,16 @@
-#include <iostream>
-#include <string>
-#include <functional>
-#include <map>
-#include <vector>
-#include <regex>
-#include <fstream>
 #include <cstdlib>
-#include <ctime>
-#include <windows.h>
-#include <limits>
-#include <iomanip>
 #include <conio.h>
+#include <ctime>
+#include <fstream>
+#include <functional>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <map>
+#include <regex>
+#include <string>
+#include <vector>
+#include <windows.h>
 #include "colors.h"
 
 using namespace std;
@@ -190,7 +190,7 @@ int get_int(const string& prompt)
         }
         else
         {
-            cout << BRED << "Invalid input. Please enter a valid integer.\n";
+            cout << BRED << "Invalid input. Please enter a valid integer.\n" << RESET;
         }
     }
 }
@@ -466,25 +466,25 @@ void logInUser(const map<string, User>& usersMap, string& userInSession, Lockout
 
         while (true)
         {
-            ch = getch(); // Read character without echoing
-            if (ch == '\r') // Enter key
+            ch = getch();
+            if (ch == '\r')
                 break;
-            else if (ch == '\b') // Backspace key
+            else if (ch == '\b')
             {
                 if (!password.empty())
                 {
-                    password.pop_back(); // Remove last character
-                    cout << "\b \b"; // Move back, print space, and move back again
+                    password.pop_back();
+                    cout << "\b \b";
                 }
             }
             else
             {
-                password += ch; // Add character to password
-                cout << '*'; // Print asterisk
+                password += ch;
+                cout << '*';
             }
         }
 
-        cout << endl;
+        cout << '\n';
 
         if (comparePasswords(password, currentUser.masterPassword))
         {
@@ -539,7 +539,6 @@ void showAccounts(const string& userID, const map<string, vector<Account>>& acco
         cout << BLUE << "└──────────────────┴──────────────────┴──────────────────┘" << RESET << '\n';
 
         cout << YELLOW << "\nPress any key to continue..." << RESET;
-        cin.ignore();
         cin.get();
     }
     else
@@ -581,7 +580,15 @@ void updateAccount(const string& userID, map<string, vector<Account>>& accountsM
         }
         cout << BLUE << "└──────┴─────────────┴─────────────┴─────────────┘" << RESET << '\n';
 
-        int choice = get_int("\nSelect the account number you want to update: ") - 1;
+        int choice = get_int("\nSelect the account number you want to update (0 to exit): ") - 1;
+
+        if (choice == -1)
+        {
+            cout << YELLOW << "Returning to main menu..." << RESET;
+            Sleep(2000);
+            return;
+        }
+
         if (choice < 0 || choice >= userAccounts.size())
         {
             cout << RED << "Invalid selection. Returning to menu." << RESET << '\n';
@@ -636,7 +643,7 @@ void updateAccount(const string& userID, map<string, vector<Account>>& accountsM
     }
     else
     {
-        cout << "No accounts found for this user.\n";
+        cout << BRED << "No accounts found for this user.\n";
         Sleep(3000);
         system("CLS");
     }
@@ -675,6 +682,13 @@ void deleteAccount(const string& userID, map<string, vector<Account>>& accountsM
         cout << BLUE << "└──────┴─────────────┴─────────────┴─────────────┘" << RESET << '\n';
 
         int choice = get_int("\nSelect the account number you want to delete: ") - 1;
+
+        if (choice == -1)
+        {
+            cout << YELLOW << "Returning to main menu..." << RESET;
+            Sleep(2000);
+            return;
+        }
 
         if (choice < 0 || choice >= userAccounts.size())
         {
@@ -733,17 +747,14 @@ void passwordManagement(const map<string, User> usersMap, const string& username
 
     do
     {
-        // Clear the screen
         system("CLS");
 
         cout << BOLD << CYAN << "╔══════════════════════════════════════════╗" << RESET << '\n';
         cout << BOLD << CYAN << "║       CyberTrex Password Manager         ║" << RESET << '\n';
         cout << BOLD << CYAN << "╚══════════════════════════════════════════╝" << RESET << '\n';
 
-        // Welcome message
         cout << "\n" << YELLOW << "Welcome, " << BOLD << username << RESET << "!\n\n";
 
-        // Menu options
         cout << BLUE << "┌──────────────────────────────────────────┐" << RESET << '\n';
         cout << BLUE << "│ " << WHITE << "1. Add an Account                        " << BLUE << "│" << RESET << '\n';
         cout << BLUE << "│ " << WHITE << "2. Display Accounts                      " << BLUE << "│" << RESET << '\n';
@@ -752,10 +763,8 @@ void passwordManagement(const map<string, User> usersMap, const string& username
         cout << BLUE << "│ " << WHITE << "5. Log out                               " << BLUE << "│" << RESET << '\n';
         cout << BLUE << "└──────────────────────────────────────────┘" << RESET << '\n';
 
-        // Prompt user for choice
-        choice = get_int("\n>> ");
+        choice = get_int(YELLOW "\n>> " RESET);
 
-        // Execute the corresponding function based on user choice
         switch (choice)
         {
             case 1:
