@@ -99,6 +99,7 @@ int main()
                 return 0;
             default:
                 cout << RED << "\nInvalid option. Please try again." << RESET << '\n';
+                Sleep(2000);
         }
     }
 }
@@ -707,7 +708,7 @@ void deleteAccount(const string& userID, map<string, vector<Account>>& accountsM
         }
         cout << BLUE << "└──────┴─────────────┴─────────────┴─────────────┘" << RESET << '\n';
 
-        int choice = get_int("\nSelect the account number you want to delete: ") - 1;
+        int choice = get_int("\nSelect the account number you want to delete (0 to exit): ") - 1;
 
         if (choice == -1)
         {
