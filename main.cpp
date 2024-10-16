@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include <windows.h>
+#include <algorithm>
 #include "colors.h"
 
 using namespace std;
@@ -40,6 +41,7 @@ struct LockoutStatus
     time_t lockoutTime;
 };
 
+void createUser(map<string, User>& usersMap);
 LockoutStatus loadLockoutStatus();
 void saveLockoutStatus(const LockoutStatus& status);
 int get_int(const string& prompt);
@@ -50,11 +52,12 @@ void saveUserToFile(const string& filename, const map<string, User>& usersMap);
 void addAccountToUser(const string& userID, map<string, vector<Account>>& accountsMap);
 void loadUsers(map<string, User>& usersMap);
 void loadAccounts(map<string, vector<Account>>& accountsMap);
-void createUser(map<string, User>& usersMap);
 bool comparePasswords(string passInput, size_t hashedPassword);
 void logInUser(const map<string, User>& usersMap, string& userInSession, LockoutStatus& lockoutStatus);
 void showAccounts(const string& userID, const map<string, vector<Account>>& accountsMap);
 void passwordManagement(const map<string, User> usersMap, const string& username, string& userInSession);
+void searchAccounts(const string& userID, const map<string, vector<Account>>& accountsMap);
+string toLower(const string& str);
 
 
 int main()
@@ -78,7 +81,7 @@ int main()
         cout << BOLD << CYAN << "╚══════════════════════════════════════════╝" << RESET << '\n';
 
         cout << BLUE << "┌──────────────────────────────────────────┐" << RESET << '\n';
-        cout << BLUE << "│ " << WHITE << "1. Create User                           " << BLUE << "│" << RESET << '\n';
+        cout << BLUE << "│ " << WHITE << "1. Sign Up                               " << BLUE << "│" << RESET << '\n';
         cout << BLUE << "│ " << WHITE << "2. Log In                                " << BLUE << "│" << RESET << '\n';
         cout << BLUE << "│ " << WHITE << "3. Exit                                  " << BLUE << "│" << RESET << '\n';
         cout << BLUE << "└──────────────────────────────────────────┘" << RESET << '\n';
@@ -102,6 +105,39 @@ int main()
                 Sleep(2000);
         }
     }
+}
+
+void createUser(map<string, User>& usersMap)
+{
+    User newUser;
+
+    cout << BLUE << "Enter username (press 0 to exit): ";
+    getline(cin >> ws, newUser.username);
+    if (newUser.username == "0")
+    {
+        system("CLS");
+        return;
+    }
+
+    newUser.masterPassword = create_password();
+    newUser.userID = to_string(generate_unique_id());
+
+    usersMap[newUser.userID] = newUser;
+
+    saveUserToFile(USERS, usersMap);
+
+    cout << GREEN << "User created successfully! Returning to main menu..." << '\n';
+    cin.ignore();
+    Sleep(3000);
+    system("CLS");
+}
+
+string toLower(const string& str)
+{
+    string lower = str;
+    transform(lower.begin(), lower.end(), lower.begin(),
+        [](unsigned char c) { return tolower(c); });
+    return lower;
 }
 
 LockoutStatus loadLockoutStatus()
@@ -128,12 +164,12 @@ LockoutStatus loadLockoutStatus()
                     {
                         status.lockoutTime = stoll(line);
                     }
-                    catch (const std::invalid_argument& e)
+                    catch (const invalid_argument& e)
                     {
                         cout << BRED << "Error: Invalid lockout time format in lockout status file.\n";
                         status.isLocked = false;
                     }
-                    catch (const std::out_of_range& e)
+                    catch (const out_of_range& e)
                     {
                         cout << BRED << "Error: Lockout time is out of range.\n";
                         status.isLocked = false;
@@ -409,30 +445,6 @@ void loadAccounts(map<string, vector<Account>>& accountsMap)
     }
 }
 
-void createUser(map<string, User>& usersMap)
-{
-    User newUser;
-
-    cout << BLUE << "Enter username (press 0 to exit): ";
-    getline(cin >> ws, newUser.username);
-    if (newUser.username == "0")
-    {
-        system("CLS");
-        return;
-    }
-
-    newUser.masterPassword = create_password();
-    newUser.userID = to_string(generate_unique_id());
-
-    usersMap[newUser.userID] = newUser;
-
-    saveUserToFile(USERS, usersMap);
-
-    cout << GREEN << "User created successfully! Returning to main menu..." << '\n';
-    cin.ignore();
-    Sleep(3000);
-    system("CLS");
-}
 
 
 bool comparePasswords(string passInput, size_t hashedPassword)
@@ -812,6 +824,9 @@ void passwordManagement(const map<string, User> usersMap, const string& username
                 Sleep(1500);
                 system("cls");
                 return;
+            case 6:
+                searchAccounts(it->second.userID, accountsMap);
+                break;
             default:
                 cout << RED << "\nInvalid option. Please try again." << RESET << '\n';
                 Sleep(1500);
@@ -820,4 +835,81 @@ void passwordManagement(const map<string, User> usersMap, const string& username
     }
     while (choice != 5);
 
+}
+
+void searchAccounts(const string& userID, const map<string, vector<Account>>& accountsMap)
+{
+    if (accountsMap.find(userID) == accountsMap.end() || accountsMap.at(userID).empty())
+    {
+        cout << YELLOW << "No accounts found for this user." << RESET << endl;
+        Sleep(2000);
+        return;
+    }
+
+    string searchTerm;
+    vector<Account> filteredAccounts;
+
+    while (true)
+    {
+        system("cls");
+        cout << CYAN << "Search Accounts" << RESET << endl;
+        cout << YELLOW << "Enter search term (press Esc to exit): " << RESET;
+        cout << searchTerm;
+
+        if (!searchTerm.empty())
+        {
+            filteredAccounts.clear();
+            string lowerSearchTerm = toLower(searchTerm);
+            for (const auto& account : accountsMap.at(userID))
+            {
+                if (toLower(account.category).find(lowerSearchTerm) != string::npos ||
+                    toLower(account.username).find(lowerSearchTerm) != string::npos)
+                {
+                    filteredAccounts.push_back(account);
+                }
+            }
+
+            // Display filtered accounts
+            if (!filteredAccounts.empty())
+            {
+                cout << "\n\n";
+                cout << BLUE << "┌────────────────────┬────────────────────┬────────────────────┐" << RESET << endl;
+                cout << BLUE << "│ " << WHITE << setw(18) << left << "Category"
+                     << BLUE << " │ " << WHITE << setw(18) << left << "Username"
+                     << BLUE << " │ " << WHITE << setw(18) << left << "Password" << BLUE << " │" << RESET << endl;
+                cout << BLUE << "├────────────────────┼────────────────────┼────────────────────┤" << RESET << endl;
+
+                for (const auto& account : filteredAccounts)
+                {
+                    cout << BLUE << "│ " << WHITE << setw(18) << left << account.category
+                         << BLUE << " │ " << WHITE << setw(18) << left << account.username
+                         << BLUE << " │ " << WHITE << setw(18) << left << account.password << BLUE << " │" << RESET << endl;
+                }
+
+                cout << BLUE << "└────────────────────┴────────────────────┴────────────────────┘" << RESET << endl;
+            }
+            else
+            {
+                cout << "\n\n" << YELLOW << "No matching accounts found." << RESET << endl;
+            }
+        }
+
+        char ch = _getch();
+
+        if (ch == 27) // Esc key
+        {
+            break;
+        }
+        else if (ch == 8) // Backspace
+        {
+            if (!searchTerm.empty())
+            {
+                searchTerm.pop_back();
+            }
+        }
+        else if (isprint(ch))
+        {
+            searchTerm += ch;
+        }
+    }
 }
