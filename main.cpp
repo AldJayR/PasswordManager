@@ -19,6 +19,7 @@ using namespace std;
 const string USERS = "users.txt";
 const string ACCOUNTS_LIST = "accounts.txt";
 const string LOCKED_STATUS = "locked.txt";
+const string XOR_KEY = "CyberTrexSecretKey";
 
 struct User
 {
@@ -41,23 +42,36 @@ struct LockoutStatus
     time_t lockoutTime;
 };
 
+// Main management flow
 void createUser(map<string, User>& usersMap);
-LockoutStatus loadLockoutStatus();
-void saveLockoutStatus(const LockoutStatus& status);
-int get_int(const string& prompt);
-void displayStartScreen();
-int generate_unique_id();
-size_t create_password();
-void saveUserToFile(const string& filename, const map<string, User>& usersMap);
+void logInUser(const map<string, User>& usersMap, string& userInSession, LockoutStatus& lockoutStatus);
+void passwordManagement(const map<string, User> usersMap, const string& username, string& userInSession);
 void addAccountToUser(const string& userID, map<string, vector<Account>>& accountsMap);
+void showAccounts(const string& userID, const map<string, vector<Account>>& accountsMap);
+void updateAccount(const string& userID, map<string, vector<Account>>& accountsMap);
+void deleteAccount(const string& userID, map<string, vector<Account>>& accountsMap);
+void searchAccounts(const string& userID, const map<string, vector<Account>>& accountsMap);
+
+// file loading functions
 void loadUsers(map<string, User>& usersMap);
 void loadAccounts(map<string, vector<Account>>& accountsMap);
+void saveUserToFile(const string& filename, const map<string, User>& usersMap);
+
+// Helper functions
+int generate_unique_id();
+size_t create_password();
 bool comparePasswords(string passInput, size_t hashedPassword);
-void logInUser(const map<string, User>& usersMap, string& userInSession, LockoutStatus& lockoutStatus);
-void showAccounts(const string& userID, const map<string, vector<Account>>& accountsMap);
-void passwordManagement(const map<string, User> usersMap, const string& username, string& userInSession);
-void searchAccounts(const string& userID, const map<string, vector<Account>>& accountsMap);
+int get_int(const string& prompt);
 string toLower(const string& str);
+string xorEncrypt(const string& input, const string& key);
+string xorDecrypt(const string& input, const string& key);
+
+// UI
+void displayStartScreen();
+
+// Lockout status
+LockoutStatus loadLockoutStatus();
+void saveLockoutStatus(const LockoutStatus& status);
 
 
 int main()
@@ -130,329 +144,6 @@ void createUser(map<string, User>& usersMap)
     cin.ignore();
     Sleep(3000);
     system("CLS");
-}
-
-string toLower(const string& str)
-{
-    string lower = str;
-    transform(lower.begin(), lower.end(), lower.begin(),
-        [](unsigned char c) { return tolower(c); });
-    return lower;
-}
-
-LockoutStatus loadLockoutStatus()
-{
-    LockoutStatus status;
-    ifstream inFile(LOCKED_STATUS);
-    if (inFile)
-    {
-        string line;
-        while (getline(inFile, line))
-        {
-            // Skip empty lines
-            if (line.empty())
-            {
-                continue;
-            }
-
-            if (line.find("locked: true") != string::npos)
-            {
-                status.isLocked = true;
-                if (getline(inFile, line) && !line.empty())
-                {
-                    try
-                    {
-                        status.lockoutTime = stoll(line);
-                    }
-                    catch (const invalid_argument& e)
-                    {
-                        cout << BRED << "Error: Invalid lockout time format in lockout status file.\n";
-                        status.isLocked = false;
-                    }
-                    catch (const out_of_range& e)
-                    {
-                        cout << BRED << "Error: Lockout time is out of range.\n";
-                        status.isLocked = false;
-                    }
-                }
-                break;
-            }
-        }
-        inFile.close();
-    }
-    else
-    {
-        cout << "Error opening lockout status file for reading.\n";
-    }
-    return status;
-}
-
-void saveLockoutStatus(const LockoutStatus& status)
-{
-    ofstream outFile(LOCKED_STATUS);
-    if (outFile)
-    {
-        if (status.isLocked)
-        {
-            outFile << "locked: true\n" << status.lockoutTime << '\n';
-        }
-        else
-        {
-            outFile << "locked: false\n";
-        }
-    }
-    else
-    {
-        cout << "Error opening lockout status file for writing.\n";
-    }
-}
-
-int get_int(const string& prompt)
-{
-    regex integer_regex("^-?[0-9]+$");
-    string input;
-
-    while (true)
-    {
-        cout << prompt;
-        getline(cin, input);
-
-        if (regex_match(input, integer_regex))
-        {
-            try
-            {
-                return stoi(input);
-            }
-            catch (out_of_range&)
-            {
-                cout << "Error: Number out of range. Please try again.\n";
-            }
-        }
-        else
-        {
-            cout << BRED << "Invalid input. Please enter a valid integer.\n" << RESET;
-        }
-    }
-}
-
-void displayStartScreen()
-{
-    system("CLS"); // Clear the console screen
-    cout << CYAN; // Set color to Cyan for the banner
-
-    cout << R"(
- ▄████▄▓██   ██▓ ▄▄▄▄   ▓█████  ██▀███  ▄▄▄█████▓ ██▀███  ▓█████ ▒██   ██▒
-▒██▀ ▀█ ▒██  ██▒▓█████▄ ▓█   ▀ ▓██ ▒ ██▒▓  ██▒ ▓▒▓██ ▒ ██▒▓█   ▀ ▒▒ █ █ ▒░
-▒▓█    ▄ ▒██ ██░▒██▒ ▄██▒███   ▓██ ░▄█ ▒▒ ▓██░ ▒░▓██ ░▄█ ▒▒███   ░░  █   ░
-▒▓▓▄ ▄██▒░ ▐██▓░▒██░█▀  ▒▓█  ▄ ▒██▀▀█▄  ░ ▓██▓ ░ ▒██▀▀█▄  ▒▓█  ▄  ░ █ █ ▒
-▒ ▓███▀ ░░ ██▒▓░░▓█  ▀█▓░▒████▒░██▓ ▒██▒  ▒██▒ ░ ░██▓ ▒██▒░▒████▒▒██▒ ▒██▒
-░ ░▒ ▒  ░ ██▒▒▒ ░▒▓███▀▒░░ ▒░ ░░ ▒▓ ░▒▓░  ▒ ░░   ░ ▒▓ ░▒▓░░░ ▒░ ░▒▒ ░ ░▓ ░
-  ░  ▒  ▓██ ░▒░ ▒░▒   ░  ░ ░  ░  ░▒ ░ ▒░    ░      ░▒ ░ ▒░ ░ ░  ░░░   ░▒ ░
-░       ▒ ▒ ░░   ░    ░    ░     ░░   ░   ░        ░░   ░    ░    ░    ░
-░ ░     ░ ░      ░         ░  ░   ░                 ░        ░  ░ ░    ░
-░       ░ ░           ░
-    )" << RESET << '\n';
-    cout << CYAN << "Loading...";
-
-    Sleep(5000);
-    return;
-}
-
-int generate_unique_id()
-{
-    srand(time(0));
-
-    return rand() % 900 + 100;
-}
-
-size_t create_password()
-{
-    regex password_regex("^[\x20-\x7E]{8,64}$");
-    string password;
-
-    while (true)
-    {
-        cout << BLUE << "Enter password: ";
-        cin >> password;
-
-        if (regex_match(password, password_regex))
-        {
-            hash<string> hash_fn;
-            size_t hashed_password = hash_fn(password);
-
-            return hashed_password;
-        }
-        else
-        {
-            cout << BRED << "Passwords must be at least 8 characters minimum." << '\n';
-        }
-    }
-}
-
-void saveUserToFile(const string& filename, const map<string, User>& usersMap)
-{
-    ofstream outFile(filename);
-
-    if (!outFile)
-    {
-        cerr << "Error: Could not open file " << filename << " for writing.\n";
-        return;
-    }
-
-    for (const auto& pair : usersMap)
-    {
-        const User& user = pair.second;
-        outFile << "id: " << user.userID << '\n'
-                << "username: " << user.username << '\n'
-                << "masterPassword: " << user.masterPassword << '\n'
-                << "---\n";
-    }
-
-    outFile.close();
-}
-
-void addAccountToUser(const string& userID, map<string, vector<Account>>& accountsMap)
-{
-    Account newAccount;
-
-    cout << "Enter account category (press 0 to exit): ";
-    getline(cin >> ws, newAccount.category);
-
-    if (newAccount.category == "0")
-    {
-        cout << "Returning to main menu...";
-        Sleep(2000);
-        return;
-    }
-
-    cout << "Enter account username: ";
-    getline(cin >> ws, newAccount.username);
-
-    cout << "Enter account password: ";
-    getline(cin >> ws, newAccount.password);
-
-    newAccount.userID = userID;
-
-    accountsMap[userID].push_back(newAccount);
-
-    ofstream outFile(ACCOUNTS_LIST, ios::app);
-    if (outFile)
-    {
-        outFile << "userID: " << newAccount.userID << '\n'
-                << "category: " << newAccount.category << '\n'
-                << "username: " << newAccount.username << '\n'
-                << "password: " << newAccount.password << '\n'
-                << "---\n";
-        cout << GREEN << "Account saved!" << '\n';
-        Sleep(2000);
-        system("CLS");
-    }
-}
-
-void loadUsers(map<string, User>& usersMap)
-{
-    ifstream inFile(USERS);
-    if (inFile)
-    {
-        string line;
-        User user;
-        while (getline(inFile, line))
-        {
-            if (line.empty())
-            {
-                continue;
-            }
-
-            if (line == "---")
-            {
-                usersMap[user.userID] = user;
-                continue;
-            }
-
-            size_t pos = line.find(": ");
-            if (pos != string::npos)
-            {
-                string key = line.substr(0, pos);
-                string value = line.substr(pos + 2);
-
-                if (key == "id")
-                {
-                    user.userID = value;
-                }
-                else if (key == "username")
-                {
-                    user.username = value;
-                }
-                else if (key == "masterPassword")
-                {
-                    user.masterPassword = stoull(value);
-                }
-            }
-        }
-
-        inFile.close();
-    }
-}
-
-void loadAccounts(map<string, vector<Account>>& accountsMap)
-{
-    ifstream inFile(ACCOUNTS_LIST);
-    if (inFile)
-    {
-        string line;
-        Account account;
-        string currentUserID;
-
-        while (getline(inFile, line))
-        {
-            if (line.empty())
-            {
-                continue;
-            }
-
-            if (line == "---")
-            {
-                accountsMap[currentUserID].push_back(account);
-                account = Account();
-                continue;
-            }
-
-            size_t pos = line.find(": ");
-            if (pos != string::npos)
-            {
-                string key = line.substr(0, pos);
-                string value = line.substr(pos + 2);
-
-                if (key == "userID")
-                {
-                    currentUserID = value;
-                }
-                else if (key == "category")
-                {
-                    account.category = value;
-                }
-                else if (key == "username")
-                {
-                    account.username = value;
-                }
-                else if (key == "password")
-                {
-                    account.password = value;
-                }
-            }
-        }
-        inFile.close();
-    }
-}
-
-
-
-bool comparePasswords(string passInput, size_t hashedPassword)
-{
-    hash<string> hash_fn;
-    size_t hashedInputPassword = hash_fn(passInput);
-
-    return hashedInputPassword == hashedPassword;
 }
 
 void logInUser(const map<string, User>& usersMap, string& userInSession, LockoutStatus& lockoutStatus)
@@ -550,6 +241,109 @@ void logInUser(const map<string, User>& usersMap, string& userInSession, Lockout
     }
 }
 
+void passwordManagement(const map<string, User> usersMap, const string& username, string& userInSession)
+{
+    map<string, vector<Account>> accountsMap;
+    loadAccounts(accountsMap);
+
+    auto it = find_if(usersMap.begin(), usersMap.end(),
+            [&](const auto& pair) { return pair.second.username == username; });
+
+    int choice;
+
+    do
+    {
+        system("CLS");
+
+        cout << BOLD << CYAN << "╔══════════════════════════════════════════╗" << RESET << '\n';
+        cout << BOLD << CYAN << "║       CyberTrex Password Manager         ║" << RESET << '\n';
+        cout << BOLD << CYAN << "╚══════════════════════════════════════════╝" << RESET << '\n';
+
+        cout << "\n" << YELLOW << "Welcome, " << BOLD << username << RESET << "!\n\n";
+
+        cout << BLUE << "┌──────────────────────────────────────────┐" << RESET << '\n';
+        cout << BLUE << "│ " << WHITE << "1. Add an Account                        " << BLUE << "│" << RESET << '\n';
+        cout << BLUE << "│ " << WHITE << "2. Display Accounts                      " << BLUE << "│" << RESET << '\n';
+        cout << BLUE << "│ " << WHITE << "3. Search an Account                     " << BLUE << "│" << RESET << '\n';
+        cout << BLUE << "│ " << WHITE << "4. Update an Account                     " << BLUE << "│" << RESET << '\n';
+        cout << BLUE << "│ " << WHITE << "5. Delete an Account                     " << BLUE << "│" << RESET << '\n';
+        cout << BLUE << "│ " << WHITE << "6. Log out                               " << BLUE << "│" << RESET << '\n';
+        cout << BLUE << "└──────────────────────────────────────────┘" << RESET << '\n';
+
+        choice = get_int(YELLOW "\n>> " RESET);
+
+        switch (choice)
+        {
+            case 1:
+                addAccountToUser(it->second.userID, accountsMap);
+                break;
+            case 2:
+                showAccounts(it->second.userID, accountsMap);
+                break;
+            case 3:
+                searchAccounts(it->second.userID, accountsMap);
+                break;
+            case 4:
+                updateAccount(it->second.userID, accountsMap);
+                break;
+            case 5:
+                deleteAccount(it->second.userID, accountsMap);
+                break;
+            case 6:
+                userInSession = "";
+                cout << GREEN << "\nLogging out..." << RESET;
+                Sleep(1500);
+                system("cls");
+                return;
+            default:
+                cout << RED << "\nInvalid option. Please try again." << RESET << '\n';
+                Sleep(1500);
+                break;
+        }
+    }
+    while (choice != 6);
+}
+
+void addAccountToUser(const string& userID, map<string, vector<Account>>& accountsMap)
+{
+    Account newAccount;
+
+    cout << "Enter account category (press 0 to exit): ";
+    getline(cin >> ws, newAccount.category);
+
+    if (newAccount.category == "0")
+    {
+        cout << "Returning to main menu...";
+        Sleep(2000);
+        return;
+    }
+
+    cout << "Enter account username: ";
+    getline(cin >> ws, newAccount.username);
+
+    cout << "Enter account password: ";
+    string plainPassword;
+    getline(cin >> ws, plainPassword);
+    newAccount.password = xorEncrypt(plainPassword, XOR_KEY);
+
+    newAccount.userID = userID;
+
+    accountsMap[userID].push_back(newAccount);
+
+    ofstream outFile(ACCOUNTS_LIST, ios::app);
+    if (outFile)
+    {
+        outFile << "userID: " << newAccount.userID << '\n'
+                << "category: " << newAccount.category << '\n'
+                << "username: " << newAccount.username << '\n'
+                << "password: " << newAccount.password << '\n'
+                << "---\n";
+        cout << GREEN << "Account saved!" << '\n';
+        Sleep(2000);
+        system("CLS");
+    }
+}
+
 void showAccounts(const string& userID, const map<string, vector<Account>>& accountsMap)
 {
     system("cls");
@@ -571,7 +365,7 @@ void showAccounts(const string& userID, const map<string, vector<Account>>& acco
         {
             cout << BLUE << "│ " << WHITE << setw(16) << left << account.category
                  << BLUE << " │ " << WHITE << setw(16) << left << account.username
-                 << BLUE << " │ " << WHITE << setw(16) << left << account.password
+                 << BLUE << " │ " << WHITE << setw(16) << left << xorDecrypt(account.password, XOR_KEY)
                  << BLUE << " │" << RESET << '\n';
         }
 
@@ -615,7 +409,7 @@ void updateAccount(const string& userID, map<string, vector<Account>>& accountsM
             cout << BLUE << "│ " << WHITE << setw(4) << i + 1 << " │ "
                  << setw(11) << left << userAccounts[i].category << " │ "
                  << setw(11) << userAccounts[i].username << " │ "
-                 << setw(11) << userAccounts[i].password << BLUE << " │" << RESET << '\n';
+                 << setw(11) << xorDecrypt(userAccounts[i].password, XOR_KEY) << BLUE << " │" << RESET << '\n';
         }
         cout << BLUE << "└──────┴─────────────┴─────────────┴─────────────┘" << RESET << '\n';
 
@@ -650,10 +444,10 @@ void updateAccount(const string& userID, map<string, vector<Account>>& accountsM
         getline(cin, newUsername);
         if (!newUsername.empty()) userAccounts[choice].username = newUsername;
 
-        cout << CYAN << "Current password: " << WHITE << userAccounts[choice].password << RESET << '\n';
+        cout << CYAN << "Current password: " << WHITE << xorDecrypt(userAccounts[choice].password, XOR_KEY) << RESET << '\n';
         cout << "Enter new password: ";
         getline(cin, newPassword);
-        if (!newPassword.empty()) userAccounts[choice].password = newPassword;
+        if (!newPassword.empty()) userAccounts[choice].password = xorEncrypt(newPassword, XOR_KEY);;
 
         ofstream outFile(ACCOUNTS_LIST);
 
@@ -716,7 +510,7 @@ void deleteAccount(const string& userID, map<string, vector<Account>>& accountsM
             cout << BLUE << "│ " << WHITE << setw(4) << i + 1 << " │ "
                  << setw(11) << left << userAccounts[i].category << " │ "
                  << setw(11) << userAccounts[i].username << " │ "
-                 << setw(11) << userAccounts[i].password << BLUE << " │" << RESET << '\n';
+                 << setw(11) << xorDecrypt(userAccounts[i].password, XOR_KEY) << BLUE << " │" << RESET << '\n';
         }
         cout << BLUE << "└──────┴─────────────┴─────────────┴─────────────┘" << RESET << '\n';
 
@@ -773,70 +567,6 @@ void deleteAccount(const string& userID, map<string, vector<Account>>& accountsM
     }
 }
 
-
-void passwordManagement(const map<string, User> usersMap, const string& username, string& userInSession)
-{
-    map<string, vector<Account>> accountsMap;
-    loadAccounts(accountsMap);
-
-    auto it = find_if(usersMap.begin(), usersMap.end(),
-            [&](const auto& pair) { return pair.second.username == username; });
-
-    int choice;
-
-    do
-    {
-        system("CLS");
-
-        cout << BOLD << CYAN << "╔══════════════════════════════════════════╗" << RESET << '\n';
-        cout << BOLD << CYAN << "║       CyberTrex Password Manager         ║" << RESET << '\n';
-        cout << BOLD << CYAN << "╚══════════════════════════════════════════╝" << RESET << '\n';
-
-        cout << "\n" << YELLOW << "Welcome, " << BOLD << username << RESET << "!\n\n";
-
-        cout << BLUE << "┌──────────────────────────────────────────┐" << RESET << '\n';
-        cout << BLUE << "│ " << WHITE << "1. Add an Account                        " << BLUE << "│" << RESET << '\n';
-        cout << BLUE << "│ " << WHITE << "2. Display Accounts                      " << BLUE << "│" << RESET << '\n';
-        cout << BLUE << "│ " << WHITE << "3. Update an Account                     " << BLUE << "│" << RESET << '\n';
-        cout << BLUE << "│ " << WHITE << "4. Delete an Account                     " << BLUE << "│" << RESET << '\n';
-        cout << BLUE << "│ " << WHITE << "5. Log out                               " << BLUE << "│" << RESET << '\n';
-        cout << BLUE << "└──────────────────────────────────────────┘" << RESET << '\n';
-
-        choice = get_int(YELLOW "\n>> " RESET);
-
-        switch (choice)
-        {
-            case 1:
-                addAccountToUser(it->second.userID, accountsMap);
-                break;
-            case 2:
-                showAccounts(it->second.userID, accountsMap);
-                break;
-            case 3:
-                updateAccount(it->second.userID, accountsMap);
-                break;
-            case 4:
-                deleteAccount(it->second.userID, accountsMap);
-                break;
-            case 5:
-                userInSession = "";
-                cout << GREEN << "\nLogging out..." << RESET;
-                Sleep(1500);
-                system("cls");
-                return;
-            case 6:
-                searchAccounts(it->second.userID, accountsMap);
-                break;
-            default:
-                cout << RED << "\nInvalid option. Please try again." << RESET << '\n';
-                Sleep(1500);
-                break;
-        }
-    }
-    while (choice != 5);
-
-}
-
 void searchAccounts(const string& userID, const map<string, vector<Account>>& accountsMap)
 {
     if (accountsMap.find(userID) == accountsMap.end() || accountsMap.at(userID).empty())
@@ -852,7 +582,10 @@ void searchAccounts(const string& userID, const map<string, vector<Account>>& ac
     while (true)
     {
         system("cls");
-        cout << CYAN << "Search Accounts" << RESET << endl;
+        cout << BOLD << CYAN << "╔══════════════════════════════════════════╗" << RESET << '\n';
+        cout << BOLD << CYAN << "║            Search an Account             ║" << RESET << '\n';
+        cout << BOLD << CYAN << "╚══════════════════════════════════════════╝" << RESET << '\n' << '\n';
+
         cout << YELLOW << "Enter search term (press Esc to exit): " << RESET;
         cout << searchTerm;
 
@@ -869,7 +602,6 @@ void searchAccounts(const string& userID, const map<string, vector<Account>>& ac
                 }
             }
 
-            // Display filtered accounts
             if (!filteredAccounts.empty())
             {
                 cout << "\n\n";
@@ -883,7 +615,7 @@ void searchAccounts(const string& userID, const map<string, vector<Account>>& ac
                 {
                     cout << BLUE << "│ " << WHITE << setw(18) << left << account.category
                          << BLUE << " │ " << WHITE << setw(18) << left << account.username
-                         << BLUE << " │ " << WHITE << setw(18) << left << account.password << BLUE << " │" << RESET << endl;
+                         << BLUE << " │ " << WHITE << setw(18) << left << xorDecrypt(account.password, XOR_KEY) << BLUE << " │" << RESET << endl;
                 }
 
                 cout << BLUE << "└────────────────────┴────────────────────┴────────────────────┘" << RESET << endl;
@@ -911,5 +643,307 @@ void searchAccounts(const string& userID, const map<string, vector<Account>>& ac
         {
             searchTerm += ch;
         }
+    }
+}
+
+// File operations and helper functions
+void loadUsers(map<string, User>& usersMap)
+{
+    ifstream inFile(USERS);
+    if (inFile)
+    {
+        string line;
+        User user;
+        while (getline(inFile, line))
+        {
+            if (line.empty())
+            {
+                continue;
+            }
+
+            if (line == "---")
+            {
+                usersMap[user.userID] = user;
+                continue;
+            }
+
+            size_t pos = line.find(": ");
+            if (pos != string::npos)
+            {
+                string key = line.substr(0, pos);
+                string value = line.substr(pos + 2);
+
+                if (key == "id")
+                {
+                    user.userID = value;
+                }
+                else if (key == "username")
+                {
+                    user.username = value;
+                }
+                else if (key == "masterPassword")
+                {
+                    user.masterPassword = stoull(value);
+                }
+            }
+        }
+
+        inFile.close();
+    }
+}
+
+void loadAccounts(map<string, vector<Account>>& accountsMap)
+{
+    ifstream inFile(ACCOUNTS_LIST);
+    if (inFile)
+    {
+        string line;
+        Account account;
+        string currentUserID;
+
+        while (getline(inFile, line))
+        {
+            if (line.empty())
+            {
+                continue;
+            }
+
+            if (line == "---")
+            {
+                accountsMap[currentUserID].push_back(account);
+                account = Account();
+                continue;
+            }
+
+            size_t pos = line.find(": ");
+            if (pos != string::npos)
+            {
+                string key = line.substr(0, pos);
+                string value = line.substr(pos + 2);
+
+                if (key == "userID")
+                {
+                    currentUserID = value;
+                }
+                else if (key == "category")
+                {
+                    account.category = value;
+                }
+                else if (key == "username")
+                {
+                    account.username = value;
+                }
+                else if (key == "password")
+                {
+                    account.password = value;
+                }
+            }
+        }
+        inFile.close();
+    }
+}
+
+void saveUserToFile(const string& filename, const map<string, User>& usersMap)
+{
+    ofstream outFile(filename);
+
+    if (!outFile)
+    {
+        cerr << "Error: Could not open file " << filename << " for writing.\n";
+        return;
+    }
+
+    for (const auto& pair : usersMap)
+    {
+        const User& user = pair.second;
+        outFile << "id: " << user.userID << '\n'
+                << "username: " << user.username << '\n'
+                << "masterPassword: " << user.masterPassword << '\n'
+                << "---\n";
+    }
+
+    outFile.close();
+}
+
+// Helper functions
+
+int generate_unique_id()
+{
+    srand(time(0));
+
+    return rand() % 900 + 100;
+}
+
+size_t create_password()
+{
+    regex password_regex("^[\x20-\x7E]{8,64}$");
+    string password;
+
+    while (true)
+    {
+        cout << BLUE << "Enter password: ";
+        cin >> password;
+
+        if (regex_match(password, password_regex))
+        {
+            hash<string> hash_fn;
+            size_t hashed_password = hash_fn(password);
+
+            return hashed_password;
+        }
+        else
+        {
+            cout << BRED << "Passwords must be at least 8 characters minimum." << '\n';
+        }
+    }
+}
+
+bool comparePasswords(string passInput, size_t hashedPassword)
+{
+    hash<string> hash_fn;
+    size_t hashedInputPassword = hash_fn(passInput);
+
+    return hashedInputPassword == hashedPassword;
+}
+
+int get_int(const string& prompt)
+{
+    regex integer_regex("^-?[0-9]+$");
+    string input;
+
+    while (true)
+    {
+        cout << prompt;
+        getline(cin, input);
+
+        if (regex_match(input, integer_regex))
+        {
+            try
+            {
+                return stoi(input);
+            }
+            catch (out_of_range&)
+            {
+                cout << "Error: Number out of range. Please try again.\n";
+            }
+        }
+        else
+        {
+            cout << BRED << "Invalid input. Please enter a valid integer.\n" << RESET;
+        }
+    }
+}
+
+string toLower(const string& str)
+{
+    string lower = str;
+    transform(lower.begin(), lower.end(), lower.begin(),
+        [](unsigned char c) { return tolower(c); });
+    return lower;
+}
+
+string xorEncrypt(const string& input, const string& key)
+{
+    string output = input;
+    for (size_t i = 0; i < input.size(); ++i)
+    {
+        output[i] = input[i] ^ key[i % key.size()];
+    }
+    return output;
+}
+
+string xorDecrypt(const string& input, const string& key)
+{
+    return xorEncrypt(input, key); // XOR encryption is symmetric
+}
+
+// UI
+void displayStartScreen()
+{
+    system("CLS"); // Clear the console screen
+    cout << CYAN; // Set color to Cyan for the banner
+
+    cout << R"(
+ ▄████▄▓██   ██▓ ▄▄▄▄   ▓█████  ██▀███  ▄▄▄█████▓ ██▀███  ▓█████ ▒██   ██▒
+▒██▀ ▀█ ▒██  ██▒▓█████▄ ▓█   ▀ ▓██ ▒ ██▒▓  ██▒ ▓▒▓██ ▒ ██▒▓█   ▀ ▒▒ █ █ ▒░
+▒▓█    ▄ ▒██ ██░▒██▒ ▄██▒███   ▓██ ░▄█ ▒▒ ▓██░ ▒░▓██ ░▄█ ▒▒███   ░░  █   ░
+▒▓▓▄ ▄██▒░ ▐██▓░▒██░█▀  ▒▓█  ▄ ▒██▀▀█▄  ░ ▓██▓ ░ ▒██▀▀█▄  ▒▓█  ▄  ░ █ █ ▒
+▒ ▓███▀ ░░ ██▒▓░░▓█  ▀█▓░▒████▒░██▓ ▒██▒  ▒██▒ ░ ░██▓ ▒██▒░▒████▒▒██▒ ▒██▒
+░ ░▒ ▒  ░ ██▒▒▒ ░▒▓███▀▒░░ ▒░ ░░ ▒▓ ░▒▓░  ▒ ░░   ░ ▒▓ ░▒▓░░░ ▒░ ░▒▒ ░ ░▓ ░
+  ░  ▒  ▓██ ░▒░ ▒░▒   ░  ░ ░  ░  ░▒ ░ ▒░    ░      ░▒ ░ ▒░ ░ ░  ░░░   ░▒ ░
+░       ▒ ▒ ░░   ░    ░    ░     ░░   ░   ░        ░░   ░    ░    ░    ░
+░ ░     ░ ░      ░         ░  ░   ░                 ░        ░  ░ ░    ░
+░       ░ ░           ░
+    )" << RESET << '\n';
+    cout << CYAN << "Loading...";
+
+    Sleep(5000);
+    return;
+}
+
+// Lockout status
+LockoutStatus loadLockoutStatus()
+{
+    LockoutStatus status;
+    ifstream inFile(LOCKED_STATUS);
+    if (inFile)
+    {
+        string line;
+        while (getline(inFile, line))
+        {
+            if (line.empty())
+            {
+                continue;
+            }
+
+            if (line.find("locked: true") != string::npos)
+            {
+                status.isLocked = true;
+                if (getline(inFile, line) && !line.empty())
+                {
+                    try
+                    {
+                        status.lockoutTime = stoll(line);
+                    }
+                    catch (const invalid_argument& e)
+                    {
+                        cout << BRED << "Error: Invalid lockout time format in lockout status file.\n";
+                        status.isLocked = false;
+                    }
+                    catch (const out_of_range& e)
+                    {
+                        cout << BRED << "Error: Lockout time is out of range.\n";
+                        status.isLocked = false;
+                    }
+                }
+                break;
+            }
+        }
+        inFile.close();
+    }
+    else
+    {
+        cout << "Error opening lockout status file for reading.\n";
+    }
+    return status;
+}
+
+void saveLockoutStatus(const LockoutStatus& status)
+{
+    ofstream outFile(LOCKED_STATUS);
+    if (outFile)
+    {
+        if (status.isLocked)
+        {
+            outFile << "locked: true\n" << status.lockoutTime << '\n';
+        }
+        else
+        {
+            outFile << "locked: false\n";
+        }
+    }
+    else
+    {
+        cout << "Error opening lockout status file for writing.\n";
     }
 }
