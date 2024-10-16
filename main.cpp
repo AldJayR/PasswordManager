@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdlib>
 #include <conio.h>
 #include <ctime>
@@ -11,7 +12,6 @@
 #include <string>
 #include <vector>
 #include <windows.h>
-#include <algorithm>
 #include "colors.h"
 
 using namespace std;
@@ -125,12 +125,35 @@ void createUser(map<string, User>& usersMap)
 {
     User newUser;
 
-    cout << BLUE << "Enter username (press 0 to exit): ";
-    getline(cin >> ws, newUser.username);
-    if (newUser.username == "0")
+    while (true)
     {
-        system("CLS");
-        return;
+        cout << CYAN << "Enter username (press 0 to exit): ";
+        getline(cin >> ws, newUser.username);
+        if (newUser.username == "0")
+        {
+            system("CLS");
+            return;
+        }
+
+        // Check if the username already exists
+        bool usernameExists = false;
+        for (const auto& pair : usersMap)
+        {
+            if (pair.second.username == newUser.username)
+            {
+                usernameExists = true;
+                break;
+            }
+        }
+
+        if (usernameExists)
+        {
+            cout << RED << "Username already exists. Please choose a different username." << RESET << endl;
+        }
+        else
+        {
+            break;
+        }
     }
 
     newUser.masterPassword = create_password();
@@ -140,7 +163,7 @@ void createUser(map<string, User>& usersMap)
 
     saveUserToFile(USERS, usersMap);
 
-    cout << GREEN << "User created successfully! Returning to main menu..." << '\n';
+    cout << GREEN << "User created successfully! Returning to main menu..." << RESET << '\n';
     cin.ignore();
     Sleep(3000);
     system("CLS");
@@ -781,7 +804,7 @@ size_t create_password()
 
     while (true)
     {
-        cout << BLUE << "Enter password: ";
+        cout << CYAN << "Enter password: ";
         cin >> password;
 
         if (regex_match(password, password_regex))
