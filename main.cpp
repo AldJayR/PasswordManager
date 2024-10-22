@@ -63,6 +63,8 @@ int generate_unique_id();
 bool comparePasswords(string passInput, size_t hashedPassword);
 string get_password(const string prompt);
 int get_int(const string& prompt);
+void hideCursor();
+void showCursor();
 string toLower(const string& str);
 string xorEncrypt(const string& input, const string& key);
 string xorDecrypt(const string& input, const string& key);
@@ -864,6 +866,24 @@ int get_int(const string& prompt)
     }
 }
 
+void hideCursor()
+{
+    HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO info;
+    info.dwSize = 100;
+    info.bVisible = FALSE;
+    SetConsoleCursorInfo(consoleHandle, &info);
+}
+
+void showCursor()
+{
+    HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO info;
+    info.dwSize = 100;
+    info.bVisible = TRUE;
+    SetConsoleCursorInfo(consoleHandle, &info);
+}
+
 string toLower(const string& str)
 {
     string lower = str;
@@ -890,8 +910,10 @@ string xorDecrypt(const string& input, const string& key)
 // UI
 void displayStartScreen()
 {
-    system("CLS"); // Clear the console screen
-    cout << CYAN; // Set color to Cyan for the banner
+    system("CLS");
+    cout << CYAN;
+
+    hideCursor();
 
     cout << R"(
  ▄████▄▓██   ██▓ ▄▄▄▄   ▓█████  ██▀███  ▄▄▄█████▓ ██▀███  ▓█████ ▒██   ██▒
@@ -905,9 +927,17 @@ void displayStartScreen()
 ░ ░     ░ ░      ░         ░  ░   ░                 ░        ░  ░ ░    ░
 ░       ░ ░           ░
     )" << RESET << '\n';
-    cout << CYAN << "Loading...";
+
+    cout << CYAN << "\t\t\t\tLoading...\n\n\t";
+
+    for (int i = 0; i <= 60; i++)
+    {
+        Sleep(100);
+        cout << "█";
+    }
 
     Sleep(5000);
+    showCursor();
     return;
 }
 
