@@ -816,7 +816,7 @@ string get_password(const string prompt)
             else
                 cout << string(password.size(), '*');
         }
-        else if (ch == 8 || ch == 127)  // Backspace key (8 for Windows, 127 for some Unix systems)
+        else if (ch == 8 || ch == 127)
         {
             if (!password.empty())
             {
@@ -824,7 +824,7 @@ string get_password(const string prompt)
                 cout << "\b \b";
             }
         }
-        else if (ch >= 32 && ch <= 126)  // Printable ASCII characters
+        else if (ch >= 32 && ch <= 126)
         {
             password += static_cast<char>(ch);
             if (showPassword)
@@ -935,6 +935,8 @@ void displayStartScreen()
         Sleep(100);
         cout << "█";
     }
+
+    cout << RESET;
 
     Sleep(5000);
     showCursor();
