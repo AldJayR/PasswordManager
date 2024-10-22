@@ -56,6 +56,7 @@ void searchAccounts(const string& userID, const map<string, vector<Account>>& ac
 void loadUsers(map<string, User>& usersMap);
 void loadAccounts(map<string, vector<Account>>& accountsMap);
 void saveUserToFile(const string& filename, const map<string, User>& usersMap);
+void saveAccounts(const map<string, vector<Account>>& accountsMap);
 
 // Helper functions
 int generate_unique_id();
@@ -472,26 +473,8 @@ void updateAccount(const string& userID, map<string, vector<Account>>& accountsM
         getline(cin, newPassword);
         if (!newPassword.empty()) userAccounts[choice].password = xorEncrypt(newPassword, XOR_KEY);;
 
-        ofstream outFile(ACCOUNTS_LIST);
+        saveAccounts(accountsMap);
 
-        if (!outFile)
-        {
-            cout << "Error opening accounts file for writing.\n";
-            return;
-        }
-
-        for (const auto& [userId, accounts] : accountsMap)
-        {
-            for (const auto& account : accounts)
-            {
-                outFile << "userID: " << userId << '\n'
-                        << "category: " << account.category << '\n'
-                        << "username: " << account.username << '\n'
-                        << "password: " << account.password << '\n'
-                        << "---\n";
-            }
-        }
-        outFile.close();
 
         cout << BGREEN << "Account updated successfully!" << RESET << '\n';
         Sleep(2000);
@@ -566,20 +549,8 @@ void deleteAccount(const string& userID, map<string, vector<Account>>& accountsM
         }
 
         userAccounts.erase(userAccounts.begin() + choice);
+        saveAccounts(accountsMap);
 
-        ofstream outFile(ACCOUNTS_LIST);
-        for (const auto& [userId, accounts] : accountsMap)
-        {
-            for (const auto& account : accounts)
-            {
-                outFile << "userID: " << userId << '\n'
-                        << "category: " << account.category << '\n'
-                        << "username: " << account.username << '\n'
-                        << "password: " << account.password << '\n'
-                        << "---\n";
-            }
-        }
-        outFile.close();
         cout << GREEN << "\nAccount deleted successfully!" << RESET << '\n';
         Sleep(2000);
     }
@@ -589,6 +560,7 @@ void deleteAccount(const string& userID, map<string, vector<Account>>& accountsM
         Sleep(2000);
     }
 }
+
 
 void searchAccounts(const string& userID, const map<string, vector<Account>>& accountsMap)
 {
@@ -785,6 +757,30 @@ void saveUserToFile(const string& filename, const map<string, User>& usersMap)
                 << "---\n";
     }
 
+    outFile.close();
+}
+
+void saveAccounts(const map<string, vector<Account>>& accountsMap)
+{
+    ofstream outFile(ACCOUNTS_LIST);
+
+    if (!outFile)
+    {
+        cerr << "File cannot be opened for writing\n";
+        return;
+    }
+
+    for (const auto& [userId, accounts] : accountsMap)
+    {
+        for (const auto& account : accounts)
+        {
+            outFile << "userID: " << userId << '\n'
+                    << "category: " << account.category << '\n'
+                    << "username: " << account.username << '\n'
+                    << "password: " << account.password << '\n'
+                    << "---\n";
+        }
+    }
     outFile.close();
 }
 
