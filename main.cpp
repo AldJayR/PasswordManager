@@ -60,8 +60,8 @@ void saveAccounts(const map<string, vector<Account>>& accountsMap);
 
 // Helper functions
 int generate_unique_id();
-size_t create_password();
 bool comparePasswords(string passInput, size_t hashedPassword);
+string get_password(const string prompt);
 int get_int(const string& prompt);
 string toLower(const string& str);
 string xorEncrypt(const string& input, const string& key);
@@ -157,7 +157,21 @@ void createUser(map<string, User>& usersMap)
         }
     }
 
-    newUser.masterPassword = create_password();
+    string prompt = "Enter master password: ";
+
+    cout << CYAN << prompt;
+    string password = get_password(prompt);
+
+    regex password_regex("^[\\x20-\\x7E]{8,64}$");
+    while (!regex_match(password, password_regex))
+    {
+        cout << BRED << "Password must be between 8 and 64 characters long." << RESET << endl;
+        cout << CYAN << prompt;
+        password = get_password(prompt);
+    }
+
+    hash<string> hash_fn;
+    newUser.masterPassword = hash_fn(password);
     newUser.userID = to_string(generate_unique_id());
 
     usersMap[newUser.userID] = newUser;
@@ -165,7 +179,6 @@ void createUser(map<string, User>& usersMap)
     saveUserToFile(USERS, usersMap);
 
     cout << GREEN << "User created successfully! Returning to main menu..." << RESET << '\n';
-    cin.ignore();
     Sleep(3000);
     system("CLS");
 }
@@ -214,31 +227,10 @@ void logInUser(const map<string, User>& usersMap, string& userInSession, Lockout
 
         const User& currentUser = it->second;
 
-        cout << "Master Password: ";
-        string password;
-        char ch;
+        string prompt = "Master Password: ";
 
-        while (true)
-        {
-            ch = getch();
-            if (ch == '\r')
-                break;
-            else if (ch == '\b')
-            {
-                if (!password.empty())
-                {
-                    password.pop_back();
-                    cout << "\b \b";
-                }
-            }
-            else
-            {
-                password += ch;
-                cout << '*';
-            }
-        }
-
-        cout << '\n';
+        cout << prompt;
+        string password = get_password(prompt);
 
         if (comparePasswords(password, currentUser.masterPassword))
         {
@@ -793,36 +785,55 @@ int generate_unique_id()
     return rand() % 900 + 100;
 }
 
-size_t create_password()
-{
-    regex password_regex("^[\x20-\x7E]{8,64}$");
-    string password;
-
-    while (true)
-    {
-        cout << CYAN << "Enter password: ";
-        cin >> password;
-
-        if (regex_match(password, password_regex))
-        {
-            hash<string> hash_fn;
-            size_t hashed_password = hash_fn(password);
-
-            return hashed_password;
-        }
-        else
-        {
-            cout << BRED << "Passwords must be at least 8 characters minimum." << '\n';
-        }
-    }
-}
-
 bool comparePasswords(string passInput, size_t hashedPassword)
 {
     hash<string> hash_fn;
     size_t hashedInputPassword = hash_fn(passInput);
 
     return hashedInputPassword == hashedPassword;
+}
+
+string get_password(const string prompt)
+{
+    string password;
+    int ch;
+    bool showPassword = false;
+
+    while (true)
+    {
+        ch = _getch();
+
+        if (ch == '\r' || ch == '\n')
+            break;
+        else if (ch == '\t')
+        {
+            showPassword = !showPassword;
+            cout << '\r' << prompt;
+            if (showPassword)
+                cout << password;
+            else
+                cout << string(password.size(), '*');
+        }
+        else if (ch == 8 || ch == 127)  // Backspace key (8 for Windows, 127 for some Unix systems)
+        {
+            if (!password.empty())
+            {
+                password.pop_back();
+                cout << "\b \b";
+            }
+        }
+        else if (ch >= 32 && ch <= 126)  // Printable ASCII characters
+        {
+            password += static_cast<char>(ch);
+            if (showPassword)
+                cout << static_cast<char>(ch);
+            else
+                cout << '*';
+        }
+    }
+
+    cout << '\n';
+    return password;
 }
 
 int get_int(const string& prompt)
